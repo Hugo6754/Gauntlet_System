@@ -9,12 +9,13 @@ namespace Gauntlet_System
 {
     internal class Program
     {
-        //Inferfaces for upgrading / downgrading players
+        // Interfaces for upgrading/ downgrading players
         interface IUpgradePlayer
         {
             GauntletPlayer UpgradePlayer();
         }
 
+        
         interface IDowngradePlayer
         {
             Player DowngradePlayer();
@@ -143,160 +144,73 @@ namespace Gauntlet_System
 
         static void Main(string[] args)
         {
-            Dictionary<string, Participant> participants = new Dictionary<string, Participant>();
+            Dictionary<string, Participant> participants = new Dictionary<string, Participant> 
+            { { "ObliVion", new Player("ObliVion", "RSA", 2000, 4, true) },
+                {"Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, -4, true) },
+                { "Vortex", new Player("Vortex", "GER", 2100, 2, true)}
+            };
 
-            participants.Add("ObliVion", new Player("ObliVion", "RSA", 1000, 4, true)); 
-            participants.Add("Novice_Joe", new Player("Novice_Joe", "USA", 1000, 0, true));
-            participants.Add("Mid_Vortex", new Player("Mid_Vortex", "GER", 1120, 2, true));
-            participants.Add("High_Kratos", new GauntletPlayer("High_Kratos", "GRE", 1250, 6, true));
 
-
-            Console.WriteLine("=== SIMULATION START ===");
-            Console.WriteLine($"Player: ObliVion | Type: {participants["ObliVion"].GetType().Name} | Elo: {participants["ObliVion"].Elo} | Streak: {participants["ObliVion"].Winstreak}\n");
-
-            Console.WriteLine("--- Match 1: Searching opponent for ObliVion... ---");
             ProcessMatch(participants, "ObliVion", "W");
 
-            Console.WriteLine($"\nPost-Match Status:");
-            Console.WriteLine($"ObliVion Type: {participants["ObliVion"].GetType().Name} | Elo: {participants["ObliVion"].Elo} | Streak: {participants["ObliVion"].Winstreak}\n");
-
-            // --- Match 2: ObliVion is now a GauntletPlayer (Streak = 0) ---
-            Console.WriteLine("--- Match 2: Searching opponent for ObliVion (as GauntletPlayer)... ---");
-            ProcessMatch(participants, "ObliVion", "W");
-
-            // Manually simulate winstreak up to 5 in Gauntlet tier to demonstrate handicap jump
-            for (int i = 0; i < 4; i++)
-            { 
-                ProcessMatch(participants, "ObliVion", "W");
+            foreach (var p in participants.Values)
+            {
+                Console.WriteLine($"Player: {p.Username} | Type: {p.GetType().Name} | Elo: {p.Elo} | Streak: {p.Winstreak}");
             }
-
-            Console.WriteLine($"\nPost-Match Status:");
-            Console.WriteLine($"ObliVion Type: {participants["ObliVion"].GetType().Name} | Elo: {participants["ObliVion"].Elo} | Streak: {participants["ObliVion"].Winstreak}\n");
-
-            // --- Match 7: ObliVion is GauntletPlayer with Streak = 5 ---
-            // Target Elo = ObliVion's Elo + (5/5 * 100) = ~1160 + 100 = 1260 Elo.
-            // Matchmaker should skip lower Elo players and pull High_Kratos (1250 Elo) or Boss_Mwetie!
-            Console.WriteLine("--- Match 7: Searching opponent with +100 Gauntlet Handicap... ---");
-            ProcessMatch(participants, "ObliVion", "W");
-
-            Console.WriteLine($"\n=== FINAL STATUS ===");
-            Console.WriteLine($"ObliVion Type: {participants["ObliVion"].GetType().Name} | Elo: {participants["ObliVion"].Elo} | Streak: {participants["ObliVion"].Winstreak}");
         }
 
-        static Participant FindOpponent(Dictionary<string, Participant> registry, Participant challenger)
+        static void ProcessMatch(Dictionary<string, Participant> registry, string challengerKey, string result)
         {
-            const int MAX_CEILING = 10000;
-            int targetElo = challenger.Elo;
-            //Matchmaking for Gauntlet players
-            //Finds players with +100 elo for Gauntlet player with streaks
-            if (challenger is GauntletPlayer && challenger.Winstreak > 0)
-            {
-                 
-                targetElo += ((challenger.Winstreak / 5) * 100);
-
-                //settles to the highest elo
-                if (targetElo > MAX_CEILING)
-                {
-                    targetElo = MAX_CEILING;
-                }
-            }
-
-            Console.WriteLine($"[MATCHMAKER] Searching for opponent near Target Elo: {targetElo} (Base Elo: {challenger.Elo}, Streak: {challenger.Winstreak})");
-            //Matchmaking for Players
-            int delta = 25;
-            int maxDelta = 100;
-            Participant candidate = null;
-
-            // Expanding search window loop
-            while (candidate == null && delta <= maxDelta)
-            {
-                int minElo = targetElo - delta;
-                int maxElo = targetElo + delta;
-
-               //filters players
-                var candidates = registry.Values.Where(p =>
-                    p.Isactive &&
-                    p.Username != challenger.Username &&
-                    p.Elo >= minElo &&
-                    p.Elo <= maxElo
-                ).ToList();
-
-                if (candidates.Count > 0)
-                {
-                    // Select the candidate closest to targetElo
-                    candidate = candidates.OrderBy(p => Math.Abs(p.Elo - targetElo)).First();
-                    Console.WriteLine($"[MATCHMAKER] Match Found! Opponent: {candidate.Username} (Elo: {candidate.Elo}) within bracket [±{delta}]");
-                    return candidate;
-                }
-
-                // Expand window
-                delta += 25;
-            }
-
-            // Fallback for candidates above maxDelta
-            var fallback = registry.Values
-                .Where(p => p.Isactive && p.Username != challenger.Username)
-                .OrderBy(p => Math.Abs(p.Elo - targetElo))
-                .FirstOrDefault();
-
-            if (fallback != null)
-            {
-                Console.WriteLine($"[MATCHMAKER] Fallback Match Found: {fallback.Username} (Elo: {fallback.Elo})");
-            }
-
-            return fallback;
-        }
-
-        //Match logic
-        static void ProcessMatch(Dictionary<string, Participant> registry, string challengerKey, string challengerResult)
-        {
-            if (!registry.ContainsKey(challengerKey))
-            {
-                Console.WriteLine("[ERROR] Challenger key not found in registry.");
-                return;
-            }
+            if (!registry.ContainsKey(challengerKey)) return;
 
             Participant p1 = registry[challengerKey];
 
-            // Auto-select opponent using expanding window algorithm
-            Participant p2 = FindOpponent(registry, p1);
+            // Match making logic for Gauntlet players
+            int targetElo = p1.Elo;
+            if (p1 is GauntletPlayer && p1.Winstreak > 0)
+            {
+                targetElo += (p1.Winstreak / 5) * 100;
+            }
+
+            //Candidate
+            Participant p2 = registry.Values
+                .Where(p => p.Isactive && p.Username != p1.Username)
+                .OrderBy(p => Math.Abs(p.Elo - targetElo))
+                .FirstOrDefault();
 
             if (p2 == null)
             {
-                Console.WriteLine("[ERROR] No active opponents available for matchmaking.");
+                Console.WriteLine("[ERROR] No active opponents found.");
                 return;
             }
 
-            //Match logic
-            string p2Result = challengerResult == "W" ? "L" : (challengerResult == "L" ? "W" : "D");
+            Console.WriteLine($"[MATCH START] {p1.Username} ({p1.GetType().Name}, Elo {p1.Elo}) vs {p2.Username} ({p2.GetType().Name}, Elo {p2.Elo})");
 
-            // Calculate Elo and Streaks
-            p1.CalculateNewElo(p2.Elo, challengerResult);
+            // Update Elo and Streaks
+            string p2Result = result == "W" ? "L" : (result == "L" ? "W" : "D");
+            p1.CalculateNewElo(p2.Elo, result);
             p2.CalculateNewElo(p1.Elo, p2Result);
 
-            // Promotion and Demotion check
+            //Upgrade/downgrades
             CheckAndSwapTier(registry, p1.Username);
             CheckAndSwapTier(registry, p2.Username);
         }
 
- 
         static void CheckAndSwapTier(Dictionary<string, Participant> registry, string username)
         {
             if (!registry.ContainsKey(username)) return;
 
-            Participant p = registry[username];
-
-            
-            if (p.Winstreak >= 5 && p is IUpgradePlayer upgradable)
+            // Check for Upgrade 
+            if (registry[username].Winstreak >= 5 && registry[username] is IUpgradePlayer upgradable)
             {
                 registry[username] = upgradable.UpgradePlayer();
-                Console.WriteLine($"{username} reached 5 wins and UPGRADED to GauntletPlayer.");
+                Console.WriteLine($"{username} reached 5 wins and UPGRADED to GauntletPlayer");
             }
-            
-            else if (p.Winstreak <= -5 && p is IDowngradePlayer downgradable)
+            // Check for Downgrade 
+            else if (registry[username].Winstreak <= -5 && registry[username] is IDowngradePlayer downgradable)
             {
                 registry[username] = downgradable.DowngradePlayer();
-                Console.WriteLine($"{username} dropped to -5 streak and DEMOTED to Player");
+                Console.WriteLine($"{username} dropped to -5 lossstreak and DEMOTED to Player");
             }
         }
     }
