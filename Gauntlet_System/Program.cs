@@ -25,7 +25,7 @@ namespace Gauntlet_System
             void CalculateNewElo(int opponent_elo, string result);
         }
 
-        public abstract class Participant: ICalculateElo
+        public abstract class Participant: ICalculateElo // Abtract class so any type of player inherits these properties
         {
             public string Username { get; private set; }
             public string Nationality { get; private set; }
@@ -33,7 +33,7 @@ namespace Gauntlet_System
             public int Winstreak { get; protected set; }
             public bool Isactive { get; private set; }
 
-            public Participant(string _username, string _nationality, int _elo, int _winstreak, bool _isActive)
+            public Participant(string _username, string _nationality, int _elo, int _winstreak, bool _isActive) // Constructer for the class
             {
                 Username = _username;
                 Nationality = _nationality;
@@ -42,23 +42,23 @@ namespace Gauntlet_System
                 Isactive = _isActive;
             }
 
-            public abstract void CalculateNewElo(int opponent_elo, string result);
+            public abstract void CalculateNewElo(int opponent_elo, string result); //Function they need to inherit could also be inherited from a interface
         }
 
         public class Player : Participant, IUpgradePlayer
         {
             public Player(string _username, string _nationality, int _elo, int _winstreak, bool _isActive)
-                : base(_username, _nationality, _elo, _winstreak, _isActive)
+                : base(_username, _nationality, _elo, _winstreak, _isActive) // Takes the base from the abstract class
             {
             }
 
-            public override void CalculateNewElo(int opponent_elo, string result)
+            public override void CalculateNewElo(int opponent_elo, string result) // Normal calculations for chess elo
             {
                 double expected_score;
                 int new_elo;
                 double outcome;
 
-                if (result == "W")
+                if (result == "W") // Setting the outcome of the match as ths will impact the amount of elo gained or lost
                 {
                     outcome = 1;
                     Winstreak = Winstreak > 0 ? Winstreak + 1 : 1;
@@ -72,10 +72,10 @@ namespace Gauntlet_System
                     outcome = 0;
                     Winstreak = Winstreak < 0 ? Winstreak - 1 : -1;
                 }
-
-                expected_score = Convert.ToDouble(1 / (1 + Math.Pow(10, (opponent_elo - this.Elo) / 400.0)));
-                new_elo = Convert.ToInt32(this.Elo + 32 * (outcome - expected_score));
-                this.Elo = new_elo;
+                 
+                expected_score = Convert.ToDouble(1 / (1 + Math.Pow(10, (opponent_elo - this.Elo) / 400.0)));  // Calculates the probability of the player to win, using their elos as refrences
+                new_elo = Convert.ToInt32(this.Elo + 32 * (outcome - expected_score));  // Multiplies the actual outcome (the outcome minus the expected) by a set k-factor to increase or decrease the elo by a set minimal amount
+                this.Elo = new_elo; //reasigns the new elo
             }
 
             public GauntletPlayer UpgradePlayer()
@@ -91,7 +91,7 @@ namespace Gauntlet_System
             {
             }
 
-            public override void CalculateNewElo(int opponent_elo, string result)
+            public override void CalculateNewElo(int opponent_elo, string result)  // Will use the same caculations but will increase the k-factor
             {
                 double expected_score;
                 int new_elo;
@@ -113,8 +113,19 @@ namespace Gauntlet_System
                 }
 
                 expected_score = Convert.ToDouble(1 / (1 + Math.Pow(10, (opponent_elo - this.Elo) / 400.0)));
-                new_elo = Convert.ToInt32(this.Elo + 64 * (outcome - expected_score));
-                this.Elo = new_elo;
+
+                double k_factor = 32.0; // Normal elo k-factor
+
+                if (result == "W")
+                {
+                    double expononent = (opponent_elo - this.Elo) / 400; // calculates a exponent to use to increase the k-factor using elo as referance
+                    k_factor = expononent * k_factor; //creates new k-factor
+                }
+
+                new_elo = Convert.ToInt32(this.Elo + k_factor * (outcome - expected_score));
+
+                this.Elo = new_elo; //Reasigns elo
+                // Interestingly when facing a high elo player the actual outcome will be so minimal it will not change the elo of the lower rated player if they lose
             }
 
             public Player DowngradePlayer()
