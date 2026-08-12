@@ -20,8 +20,12 @@ namespace Gauntlet_System
         {
             Player DowngradePlayer();
         }
+        interface ICalculateElo
+        {
+            void CalculateNewElo(int opponent_elo, string result);
+        }
 
-        public abstract class Participant
+        public abstract class Participant: ICalculateElo
         {
             public string Username { get; private set; }
             public string Nationality { get; private set; }
@@ -169,7 +173,7 @@ namespace Gauntlet_System
             int targetElo = p1.Elo;
             if (p1 is GauntletPlayer && p1.Winstreak > 0)
             {
-                targetElo += (p1.Winstreak / 5) * 100;
+                targetElo += (p1.Winstreak / 3) * 100;
             }
 
             //Candidate
