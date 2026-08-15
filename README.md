@@ -39,6 +39,3 @@ The Gauntlet System addresses this by giving strong, in form players a high stak
 
 
 
-## Reference
-
-Aeschbach, F. L. et al., 2023. The psychology of esports players' ELO Hell: Motivated bias in League of Legends and its impact on players' overestimation of skill. Computers in Human Behavior, 147(107828), pp. 1-16.
