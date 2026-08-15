@@ -26,6 +26,57 @@ namespace Gauntlet_System
             void CalculateNewElo(int opponent_elo, string result);
         }
 
+        // Custom Exceptions
+        public class PlayerNotFoundException : Exception
+        {
+            public PlayerNotFoundException(string message)
+                : base(message)
+            {
+            }
+        }
+
+        public class InvalidMatchResultException : Exception
+        {
+            public InvalidMatchResultException(string message)
+                : base(message)
+            {
+            }
+        }
+
+        public class NoActiveOpponentException : Exception
+        {
+            public NoActiveOpponentException(string message)
+                : base(message)
+            {
+            }
+        }
+        //Delegates
+        public delegate void StreakThresholdReachedHandler(Participant player);//Delegate for Streak
+        //Delegate for a completed match
+        public delegate void MatchCompletedHandler(
+            Participant player1,
+            Participant player2,
+            string result);
+        // Events
+        public static event StreakThresholdReachedHandler StreakThresholdReached;//Event for Streak
+
+        public static event MatchCompletedHandler MatchCompleted;//Event for completed match
+
+        //Subscribers
+        static void OnStreakThresholdReached(Participant player)//Subscriber for Streak 
+        {
+            Console.WriteLine(
+                $"[GAUNTLET] {player.Username} reached a 5-win streak and triggered a Gauntlet pairing!");
+        }
+        static void OnMatchCompleted(
+    Participant player1,
+    Participant player2,
+    string result)
+        {
+            Console.WriteLine(
+                $"[MATCH COMPLETED] {player1.Username} vs {player2.Username} | Result: {result}");
+        }//Subscriber for completed match
+
         public abstract class Participant: ICalculateElo // Abtract class so any type of player inherits these properties
         {
             public string Username { get; private set; }
@@ -160,16 +211,38 @@ namespace Gauntlet_System
 
         static void Main(string[] args)
         {
+            StreakThresholdReached += OnStreakThresholdReached;// Subscribes the event to the method
+            MatchCompleted += OnMatchCompleted;// Subscribes the event to the method
+
             Dictionary<string, Participant> participants = new Dictionary<string, Participant> 
             { { "ObliVion", new Player("ObliVion", "RSA", 2000, 4, true) },
                 {"Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, -4, true) },
                 { "Vortex", new Player("Vortex", "GER", 2100, 2, true)}
             };
 
+            try
+            {
+                ProcessMatch(participants, "ObliVion", "W");
+            }
 
-            ProcessMatch(participants, "ObliVion", "W");
+            catch (PlayerNotFoundException ex)
+            {
+                Console.WriteLine($"[ERROR] {ex.Message}");
+            }
+            catch (InvalidMatchResultException ex)
+            {
+                Console.WriteLine($"[ERROR] {ex.Message}");
+            }
+            catch (NoActiveOpponentException ex)
+            {
+                Console.WriteLine($"[ERROR] {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UNEXPECTED ERROR] {ex.Message}");
+            }
 
-            foreach (var p in participants.Values)
+             foreach (var p in participants.Values)
             {
                 Console.WriteLine($"Player: {p.Username} | Type: {p.GetType().Name} | Elo: {p.Elo} | Streak: {p.Winstreak}");
             }
@@ -177,7 +250,11 @@ namespace Gauntlet_System
 
         static void ProcessMatch(Dictionary<string, Participant> registry, string challengerKey, string result)
         {
-            if (!registry.ContainsKey(challengerKey)) return;
+            if (!registry.ContainsKey(challengerKey))
+            {
+                throw new PlayerNotFoundException(
+            $"Player '{challengerKey}' was not found.");//Added throw for when the player is not found in the registry
+            }/*return*/;
 
             Participant p1 = registry[challengerKey];
 
@@ -194,22 +271,39 @@ namespace Gauntlet_System
                 .OrderBy(p => Math.Abs(p.Elo - targetElo))
                 .FirstOrDefault();
 
+            /* if (p2 == null)
+             {
+                 Console.WriteLine("[ERROR] No active opponents found.");
+                 return;
+             }*/
             if (p2 == null)
             {
-                Console.WriteLine("[ERROR] No active opponents found.");
-                return;
+                throw new NoActiveOpponentException(
+                    "No active opponents are currently available.");
             }
 
             Console.WriteLine($"[MATCH START] {p1.Username} ({p1.GetType().Name}, Elo {p1.Elo}) vs {p2.Username} ({p2.GetType().Name}, Elo {p2.Elo})");
 
             // Update Elo and Streaks
             string p2Result = result == "W" ? "L" : (result == "L" ? "W" : "D");
+            // Validate result input
+            result = result.ToUpper();
+
+            if (result != "W" && result != "L" && result != "D")
+            {
+                throw new InvalidMatchResultException(
+                    "Invalid match result. Please enter W, L, or D.");
+            } // Validate result input
+
             p1.CalculateNewElo(p2.Elo, result);
             p2.CalculateNewElo(p1.Elo, p2Result);
 
             //Upgrade/downgrades
             CheckAndSwapTier(registry, p1.Username);
             CheckAndSwapTier(registry, p2.Username);
+
+            // Match has now completed
+            MatchCompleted?.Invoke(p1, p2, result);
         }
 
         static void CheckAndSwapTier(Dictionary<string, Participant> registry, string username)
