@@ -325,7 +325,7 @@ namespace Gauntlet_System
             Participant current = registry[username];
 
             // Check for Upgrade 
-            if (current.Winstreak >= 5)
+            if (current.Winstreak >= 3)
             {
                 Participant upgraded = current.GetNextTier();
                 if (upgraded != current)
@@ -335,7 +335,7 @@ namespace Gauntlet_System
                 }
             }
             // Check for Downgrade 
-            else if (current.Winstreak <= -5)
+            else if (current.Winstreak <= -3)
             {
                 Participant downgraded = current.GetPreviousTier();
                 if (downgraded != current)
