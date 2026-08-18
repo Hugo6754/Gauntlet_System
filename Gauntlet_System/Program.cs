@@ -35,29 +35,6 @@ namespace Gauntlet_System
                 $"[MATCH COMPLETED] {player1.Username} vs {player2.Username} | Result: {result}");
         }//Subscriber for completed match 
 
-
-
-
-        public class InvalidPlayerDataException : Exception
-        {
-            public InvalidPlayerDataException(string message)
-                : base(message)
-            {
-            }
-        }
-
-
-        public class PlayerRecord
-        {
-            public string Type { get; set; }
-            public string Username { get; set; }
-            public string Nationality { get; set; }
-            public int Elo { get; set; }
-            public int Winstreak { get; set; }
-            public bool Isactive { get; set; }
-        }
-
-
         private static readonly object RegistryLock = new object(); // Lock object for thread safety 
 
         //Win-streak threshold that triggers a gauntlet pairing 
@@ -94,16 +71,6 @@ namespace Gauntlet_System
             }
         }
 
-        enum Menu
-        {
-            View_All_Players = 1,
-            Add_a_Player,
-            Trigger_a_match,
-            Change_Player_Status,
-            Save_Roster,
-            Load_Roster,
-            Exit
-        }
 
         static void ViewAllPlayers(Dictionary<string, Participant> registry)
         {
@@ -477,7 +444,6 @@ namespace Gauntlet_System
                 {
                     case "1":
                         ViewAllPlayers(participants);
-                        Console.ReadLine();
                         break;
                     case "2":
                         AddPlayer(participants);

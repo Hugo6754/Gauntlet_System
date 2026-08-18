@@ -74,12 +74,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\EnumMenu.cs" />
     <Compile Include="Classes\GauntletPlayer.cs" />
     <Compile Include="Classes\Participant.cs" />
     <Compile Include="Classes\Player.cs" />
+    <Compile Include="Classes\PlayerRecord.cs" />
     <Compile Include="Events\Delegates.cs" />
     <Compile Include="Events\Events.cs" />
     <Compile Include="Exceptions\InvalidMatchResult.cs" />
+    <Compile Include="Exceptions\InvalidPlayerData.cs" />
     <Compile Include="Exceptions\NoActiveOpponent.cs" />
     <Compile Include="Exceptions\PlayerNotFound.cs" />
     <Compile Include="Interfaces\IPromotable.cs" />
