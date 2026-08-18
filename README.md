@@ -1,6 +1,6 @@
 # Gauntlet System
 
-A command-line chess matchmaking system built around a dynamic streak system, multithreaded matchmaking, and event-driven notifications. The system pairs players of similar Elo for normal matches, but rewards win streaks by pushing players up against significantly higher-rated opponents—giving skilled players a faster path out of Elo stagnation.
+A command-line chess matchmaking system built around a dynamic streak system, multithreaded matchmaking, and event-driven notifications. The system pairs players of similar Elo for normal matches, but rewards win streaks by pushing players up against significantly higher-rated opponents, giving skilled players a faster path out of Elo stagnation.
 
 ## Why This System?
 
