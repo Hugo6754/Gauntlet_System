@@ -61,102 +61,42 @@ namespace Gauntlet_System
 
         private static volatile bool _monitorRunning = true; // Flag to control the monitoring thread 
 
-        static void Main(string[] args)
+        static string SimulateGauntletResult(Dictionary<string, Participant> registry, string challengerKey)
         {
-            EventManager.StreakThresholdReached += OnStreakThresholdReached;// Subscribes the event to the method 
-            EventManager.MatchCompleted += OnMatchCompleted;// Subscribes the event to the method 
-
-            Dictionary<string, Participant> participants = new Dictionary<string, Participant>
+            lock (RegistryLock)
             {
-                { "ObliVion", new Player("ObliVion", "RSA", 2000, 4, true) },
-                { "Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, -4, true) },
-                { "Vortex", new Player("Vortex", "GER", 2100, 2, true) }
-            };
+                if (!registry.ContainsKey(challengerKey)) return null;
+                var p1 = registry[challengerKey];
 
-            // Starts the thread to monitor the gauntlet 
-            Thread monitorThread = new Thread(() => MatchmakingMonitor(participants))
-            {
-                IsBackground = true
-            };
-            monitorThread.Start();
+                int targetElo = p1.Elo;
+                if (p1 is GauntletPlayer && p1.Winstreak > 0)
+                    targetElo += (p1.Winstreak / 3) * 100;
 
-            /*try 
-            { 
-                ProcessMatch(participants, "ObliVion", "W"); 
-            } 
+                var p2 = registry.Values
+                    .Where(p => p.Isactive && p.Username != p1.Username)
+                    .OrderBy(p => Math.Abs(p.Elo - targetElo))
+                    .FirstOrDefault();
 
-            catch (PlayerNotFoundException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (InvalidMatchResultException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (NoActiveOpponentException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (Exception ex) 
-            { 
-                Console.WriteLine($"[UNEXPECTED ERROR] {ex.Message}"); 
-            } 
+                if (p2 == null) return null;
 
-             foreach (var p in participants.Values) 
-            { 
-                Console.WriteLine($"Player: {p.Username} | Type: {p.GetType().Name} | Elo: {p.Elo} | Streak: {p.Winstreak}"); 
-            }*/
+                double expected = 1.0 / (1.0 + Math.Pow(10.0, (p2.Elo - p1.Elo) / 400.0));
+                double roll = Rng.NextDouble();
 
-            bool running = true;
-            while (running)
-            {
-                Console.WriteLine("=========================");
-                Console.WriteLine("     GAUNTLET SYSTEM     ");
-                Console.WriteLine("=========================");
-
-                foreach (Menu menu in Enum.GetValues(typeof(Menu)))
-                {
-                    Console.WriteLine($"{(int)menu}. {menu.ToString().Replace("_", " ")}");
-                }
-
-                string choice = Console.ReadLine();
-
-                switch (choice)
-                {
-                    case "1":
-                        ViewAllPlayers(participants);
-                        Console.ReadLine();
-                        break;
-                    case "2":
-                        AddPlayer(participants);
-                        break;
-                    case "3":
-                        TriggerMatch(participants);
-                        break;
-                    case "4":
-                        ToggleActive(participants);
-                        break;
-                    case "5":
-                        Console.Write("File path to save to (e.g. roster.json): ");
-                        SaveRoster(participants, Console.ReadLine());
-                        break;
-                    case "6":
-                        Console.Write("File path to load from: ");
-                        LoadRoster(participants, Console.ReadLine());
-                        break;
-                    case "0":
-                        running = false;
-                        break;
-                    default:
-                        Console.WriteLine("Invalid option, try again.");
-                        break;
-                }
-                Console.Clear();
+                if (roll < expected - 0.05) return "W";
+                if (roll > expected + 0.05) return "L";
+                return "D";
             }
+        }
 
-            // Stop the background monitor once the user exits the menu 
-            _monitorRunning = false;
-            monitorThread.Join();
+        enum Menu
+        {
+            View_All_Players = 1,
+            Add_a_Player,
+            Trigger_a_match,
+            Change_Player_Status,
+            Save_Roster,
+            Load_Roster,
+            Exit
         }
 
         static void ViewAllPlayers(Dictionary<string, Participant> registry)
@@ -324,18 +264,6 @@ namespace Gauntlet_System
             }
         }
 
-        enum Menu
-        {
-            View_All_Players = 1,
-            Add_a_Player,
-            Trigger_a_match,
-            Change_Player_Status,
-            Save_Roster,
-            Load_Roster,
-            Exit
-        }
-
-
         static void ProcessMatch(Dictionary<string, Participant> registry, string challengerKey, string result)
         {
             lock (RegistryLock) // Locking the registry to ensure thread safety 
@@ -458,32 +386,103 @@ namespace Gauntlet_System
             }
         }
 
-        //Method for W, L, D simulation based on Elo ratings 
-        static string SimulateGauntletResult(Dictionary<string, Participant> registry, string challengerKey)
+
+        static void Main(string[] args)
         {
-            lock (RegistryLock)
+            EventManager.StreakThresholdReached += OnStreakThresholdReached;// Subscribes the event to the method 
+            EventManager.MatchCompleted += OnMatchCompleted;// Subscribes the event to the method 
+
+            Dictionary<string, Participant> participants = new Dictionary<string, Participant>
             {
-                if (!registry.ContainsKey(challengerKey)) return null;
-                var p1 = registry[challengerKey];
+                { "ObliVion", new Player("ObliVion", "RSA", 2000, 4, true) },
+                { "Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, -4, true) },
+                { "Vortex", new Player("Vortex", "GER", 2100, 2, true) }
+            };
 
-                int targetElo = p1.Elo;
-                if (p1 is GauntletPlayer && p1.Winstreak > 0)
-                    targetElo += (p1.Winstreak / 3) * 100;
+            // Starts the thread to monitor the gauntlet 
+            Thread monitorThread = new Thread(() => MatchmakingMonitor(participants))
+            {
+                IsBackground = true
+            };
+            monitorThread.Start();
 
-                var p2 = registry.Values
-                    .Where(p => p.Isactive && p.Username != p1.Username)
-                    .OrderBy(p => Math.Abs(p.Elo - targetElo))
-                    .FirstOrDefault();
+            /*try 
+            { 
+                ProcessMatch(participants, "ObliVion", "W"); 
+            } 
 
-                if (p2 == null) return null;
+            catch (PlayerNotFoundException ex) 
+            { 
+                Console.WriteLine($"[ERROR] {ex.Message}"); 
+            } 
+            catch (InvalidMatchResultException ex) 
+            { 
+                Console.WriteLine($"[ERROR] {ex.Message}"); 
+            } 
+            catch (NoActiveOpponentException ex) 
+            { 
+                Console.WriteLine($"[ERROR] {ex.Message}"); 
+            } 
+            catch (Exception ex) 
+            { 
+                Console.WriteLine($"[UNEXPECTED ERROR] {ex.Message}"); 
+            } 
 
-                double expected = 1.0 / (1.0 + Math.Pow(10.0, (p2.Elo - p1.Elo) / 400.0));
-                double roll = Rng.NextDouble();
+             foreach (var p in participants.Values) 
+            { 
+                Console.WriteLine($"Player: {p.Username} | Type: {p.GetType().Name} | Elo: {p.Elo} | Streak: {p.Winstreak}"); 
+            }*/
 
-                if (roll < expected - 0.05) return "W";
-                if (roll > expected + 0.05) return "L";
-                return "D";
+            bool running = true;
+            while (running)
+            {
+                Console.WriteLine("=========================");
+                Console.WriteLine("     GAUNTLET SYSTEM     ");
+                Console.WriteLine("=========================");
+
+                foreach (Menu menu in Enum.GetValues(typeof(Menu)))
+                {
+                    Console.WriteLine($"{(int)menu}. {menu.ToString().Replace("_", " ")}");
+                }
+
+                string choice = Console.ReadLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        ViewAllPlayers(participants);
+                        Console.ReadLine();
+                        break;
+                    case "2":
+                        AddPlayer(participants);
+                        break;
+                    case "3":
+                        TriggerMatch(participants);
+                        break;
+                    case "4":
+                        ToggleActive(participants);
+                        break;
+                    case "5":
+                        Console.Write("File path to save to (e.g. roster.json): ");
+                        SaveRoster(participants, Console.ReadLine());
+                        break;
+                    case "6":
+                        Console.Write("File path to load from: ");
+                        LoadRoster(participants, Console.ReadLine());
+                        break;
+                    case "0":
+                        running = false;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option, try again.");
+                        break;
+                }
+                Console.Clear();
             }
+
+            // Stop the background monitor once the user exits the menu 
+            _monitorRunning = false;
+            monitorThread.Join();
         }
     }
 }
