@@ -27,30 +27,9 @@ namespace Gauntlet_System
     internal class Program
 
     {
-
         // Interfaces for upgrading/ downgrading players 
 
-        interface IUpgradePlayer
-
-        {
-
-            GauntletPlayer UpgradePlayer();
-
-        }
-
-
-
-
-
-        interface IDowngradePlayer
-
-        {
-
-            Player DowngradePlayer();
-
-        }
-
-        interface ICalculateElo
+        interface ITier
 
         {
 
@@ -58,7 +37,13 @@ namespace Gauntlet_System
 
         }
 
+        interface IPromotable
 
+        {
+            Participant UpgradePlayer();
+            Participant DowngradePlayer();
+
+        }
 
         // Custom Exceptions 
 
@@ -162,7 +147,7 @@ namespace Gauntlet_System
 
 
 
-        public abstract class Participant : ICalculateElo // Abtract class so any type of player inherits these properties 
+        public abstract class Participant : ITier,IPromotable // Abtract class so any type of player inherits these properties 
 
         {
 
@@ -207,12 +192,13 @@ namespace Gauntlet_System
 
 
             public abstract void CalculateNewElo(int opponent_elo, string result); //Function they need to inherit could also be inherited from a interface 
-
+            public abstract Participant UpgradePlayer();
+            public abstract Participant DowngradePlayer();
         }
 
 
 
-        public class Player : Participant, IUpgradePlayer
+        public class Player : Participant
 
         {
 
@@ -278,11 +264,18 @@ namespace Gauntlet_System
 
 
 
-            public GauntletPlayer UpgradePlayer()
+            public Participant UpgradePlayer()
 
             {
 
                 return new GauntletPlayer(this.Username, this.Nationality, this.Elo, 0, this.Isactive);
+
+            }
+            public Participant DowngradePlayer()
+
+            {
+
+                return this;
 
             }
 
@@ -375,16 +368,23 @@ namespace Gauntlet_System
                 // Interestingly when facing a high elo player the actual outcome will be so minimal it will not change the elo of the lower rated player if they lose 
 
             }
+            public Participant UpgradePlayer()
+
+            {
+
+                return this;
+
+            }
 
 
-
-            public Player DowngradePlayer()
+            public Participant DowngradePlayer()
 
             {
 
                 return new Player(this.Username, this.Nationality, this.Elo, 0, this.Isactive);
 
             }
+           
 
         }
 
