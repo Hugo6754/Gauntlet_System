@@ -386,7 +386,6 @@ namespace Gauntlet_System
             }
         }
 
-
         static void Main(string[] args)
         {
             EventManager.StreakThresholdReached += OnStreakThresholdReached;// Subscribes the event to the method 
@@ -470,7 +469,7 @@ namespace Gauntlet_System
                         Console.Write("File path to load from: ");
                         LoadRoster(participants, Console.ReadLine());
                         break;
-                    case "0":
+                    case "7":
                         running = false;
                         break;
                     default:
