@@ -35,11 +35,17 @@ namespace Gauntlet_System
                 $"[MATCH COMPLETED] {player1.Username} vs {player2.Username} | Result: {result}");
         }//Subscriber for completed match 
 
-        
 
-       
 
-        
+
+        public class InvalidPlayerDataException : Exception
+        {
+            public InvalidPlayerDataException(string message)
+                : base(message)
+            {
+            }
+        }
+
 
         public class PlayerRecord
         {
@@ -119,36 +125,82 @@ namespace Gauntlet_System
 
         static void AddPlayer(Dictionary<string, Participant> registry)
         {
-            Console.Write("Username: ");
-            string username = Console.ReadLine();
+            try {
+                Console.Write("Username: ");
+                string username = Console.ReadLine();
 
-            lock (RegistryLock)
-            {
-                if (registry.ContainsKey(username))
+                if (string.IsNullOrWhiteSpace(username))
                 {
-                    Console.WriteLine($"A player named '{username}' already exists.");
+                    throw new InvalidPlayerDataException(
+                        "Username cannot be empty.");
+                }
+
+                if (username.Any(char.IsDigit))
+                {
+                    throw new InvalidPlayerDataException(
+                        "Username cannot contain numbers.");
+                }
+
+                lock (RegistryLock)
+                {
+                    if (registry.ContainsKey(username))
+                    {
+                        Console.WriteLine($"A player named '{username}' already exists.");
+                        return;
+                    }
+                    if (registry.ContainsKey(username))
+                    {
+                        throw new InvalidPlayerDataException(
+                            $"A player named '{username}' already exists.");
+                    }
+                }
+
+                Console.Write("Nationality: ");
+                string nationality = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(nationality))
+                {
+                    throw new InvalidPlayerDataException(
+                        "Nationality cannot be empty.");
+                }
+
+                if (nationality.Any(char.IsDigit))
+                {
+                    throw new InvalidPlayerDataException(
+                        "Nationality cannot contain numbers.");
+                }
+
+                Console.Write("Starting Elo: ");
+                if (!int.TryParse(Console.ReadLine(), out int elo))
+                {
+                    Console.WriteLine("Invalid Elo — must be a number. Player not added.");
                     return;
                 }
+                if (elo < 0)
+                {
+                    throw new InvalidPlayerDataException(
+                        "Elo cannot be negative.");
+                }
+
+
+                var newPlayer = new Player(username, nationality, elo, 0, true);
+
+                lock (RegistryLock)
+                {
+                    registry[username] = newPlayer;
+                }
+
+                Console.WriteLine($"{username} added as a new Player.");
             }
 
-            Console.Write("Nationality: ");
-            string nationality = Console.ReadLine();
-
-            Console.Write("Starting Elo: ");
-            if (!int.TryParse(Console.ReadLine(), out int elo))
+            catch (InvalidPlayerDataException ex)
             {
-                Console.WriteLine("Invalid Elo — must be a number. Player not added.");
-                return;
+                Console.WriteLine($"[ERROR] {ex.Message}");
             }
-
-            var newPlayer = new Player(username, nationality, elo, 0, true);
-
-            lock (RegistryLock)
+            catch (Exception ex)
             {
-                registry[username] = newPlayer;
+                Console.WriteLine($"[UNEXPECTED ERROR] {ex.Message}");
             }
-
-            Console.WriteLine($"{username} added as a new Player.");
         }
 
         static void TriggerMatch(Dictionary<string, Participant> registry)
@@ -393,8 +445,8 @@ namespace Gauntlet_System
 
             Dictionary<string, Participant> participants = new Dictionary<string, Participant>
             {
-                { "ObliVion", new Player("ObliVion", "RSA", 2000, 4, true) },
-                { "Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, -4, true) },
+                { "ObliVion", new Player("ObliVion", "RSA", 2000, 1, true) },
+                { "Mwetie", new GauntletPlayer("Mwetie", "RUS", 2000, 0, true) },
                 { "Vortex", new Player("Vortex", "GER", 2100, 2, true) }
             };
 
@@ -405,32 +457,7 @@ namespace Gauntlet_System
             };
             monitorThread.Start();
 
-            /*try 
-            { 
-                ProcessMatch(participants, "ObliVion", "W"); 
-            } 
-
-            catch (PlayerNotFoundException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (InvalidMatchResultException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (NoActiveOpponentException ex) 
-            { 
-                Console.WriteLine($"[ERROR] {ex.Message}"); 
-            } 
-            catch (Exception ex) 
-            { 
-                Console.WriteLine($"[UNEXPECTED ERROR] {ex.Message}"); 
-            } 
-
-             foreach (var p in participants.Values) 
-            { 
-                Console.WriteLine($"Player: {p.Username} | Type: {p.GetType().Name} | Elo: {p.Elo} | Streak: {p.Winstreak}"); 
-            }*/
+            
 
             bool running = true;
             while (running)
@@ -476,7 +503,13 @@ namespace Gauntlet_System
                         Console.WriteLine("Invalid option, try again.");
                         break;
                 }
-                Console.Clear();
+                if (running)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Press Enter to continue...");
+                    Console.ReadLine();
+                    Console.Clear();
+                }
             }
 
             // Stop the background monitor once the user exits the menu 
