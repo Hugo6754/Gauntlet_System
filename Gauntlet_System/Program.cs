@@ -569,10 +569,15 @@ namespace Gauntlet_System
             bool running = true;
 
             while (running)
-
             {
+                Console.WriteLine("=========================");
+                Console.WriteLine("     GAUNTLET SYSTEM     ");
+                Console.WriteLine("=========================");
 
-                ShowMenu();
+                foreach (Menu menu in Enum.GetValues(typeof(Menu)))
+                {
+                    Console.WriteLine($"{(int)menu}. {menu.ToString().Replace("_", " ")}");
+                }
 
                 string choice = Console.ReadLine();
 
@@ -585,7 +590,7 @@ namespace Gauntlet_System
                     case "1":
 
                         ViewAllPlayers(participants);
-
+                        Console.ReadLine();
                         break;
 
                     case "2":
@@ -633,9 +638,8 @@ namespace Gauntlet_System
                         Console.WriteLine("Invalid option, try again.");
 
                         break;
-
                 }
-
+                Console.Clear();
             }
 
             // Stop the background monitor once the user exits the menu 
@@ -1008,6 +1012,16 @@ namespace Gauntlet_System
 
         }
 
+        enum Menu
+        {
+            View_All_Players = 1,
+            Add_a_Player,
+            Trigger_a_match,
+            Change_Player_Status,
+            Save_Roster,
+            Load_Roster,
+            Exit
+        }
 
 
         static void ProcessMatch(Dictionary<string, Participant> registry, string challengerKey, string result)
